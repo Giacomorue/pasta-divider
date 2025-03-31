@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pasta Divider
 
-## Getting Started
+Un'applicazione web per calcolare facilmente quanto pasta cotta deve mangiare ciascuna persona, in base alle loro preferenze di pasta cruda.
 
-First, run the development server:
+## Funzionalità
+
+- Calcolo automatico delle porzioni di pasta cotta in base alla quantità di pasta cruda preferita da ciascuna persona
+- Interfaccia utente intuitiva e reattiva, ottimizzata per dispositivi mobili
+- Calcolo immediato del fattore di crescita della pasta durante la cottura
+- Possibilità di copiare i risultati negli appunti
+- Design moderno e accattivante con tema "pasta"
+
+## Come funziona
+
+1. Inserisci i nomi delle persone e la quantità di pasta cruda che vogliono mangiare
+2. Dopo aver cotto la pasta, pesa il totale della pasta cotta
+3. L'applicazione calcolerà automaticamente quanto pasta cotta deve mangiare ciascuna persona
+4. Visualizza i risultati e copia se necessario
+
+## Tecnologie utilizzate
+
+- Next.js 14
+- React
+- TypeScript
+- Tailwind CSS
+- Shadcn/UI per i componenti
+- Lucide React per le icone
+
+## Sviluppo locale
+
+Per eseguire l'applicazione in locale:
 
 ```bash
+# Installa le dipendenze
+npm install
+
+# Avvia il server di sviluppo
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Apri [http://localhost:3000](http://localhost:3000) nel tuo browser per vedere l'applicazione.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Licenza
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+MIT
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Creato con ❤️ per tutti gli amanti della pasta
