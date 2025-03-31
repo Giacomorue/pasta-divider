@@ -23,7 +23,7 @@ type Preset = {
   persone: Omit<Persona, 'quantitaCotta'>[];
 }
 
-const PORZIONE_DEFAULT = 80;
+const PORZIONE_DEFAULT = 100;
 
 export default function Home() {
   const idBase = useId();
@@ -566,7 +566,7 @@ export default function Home() {
                 
                 {/* Pulsanti di scelta rapida */}
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {[200, 300, 400, 500, 600].map((peso) => (
+                  {[500, 600, 700, 800, 900].map((peso) => (
                     <Button 
                       key={peso}
                       type="button" 
