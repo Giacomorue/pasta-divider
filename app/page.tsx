@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useState, useEffect, useId } from 'react'
-import { Plus, Trash2, HelpCircle, CheckCircle, Scale, User, UtensilsCrossed, RotateCcw, Minus, Save } from 'lucide-react'
+import { Plus, Trash2, HelpCircle, CheckCircle, Scale, User, UtensilsCrossed, RotateCcw, Minus, Save, Star, Bookmark } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
@@ -17,7 +17,13 @@ type Persona = {
   quantitaCotta: number;
 }
 
-const PORZIONE_DEFAULT = 100;
+type Preset = {
+  id: string;
+  nome: string;
+  persone: Omit<Persona, 'quantitaCotta'>[];
+}
+
+const PORZIONE_DEFAULT = 80;
 
 export default function Home() {
   const idBase = useId();
@@ -29,6 +35,11 @@ export default function Home() {
   const [risultatiCopiati, setRisultatiCopiati] = useState<boolean>(false);
   const [mostraInfo, setMostraInfo] = useState<boolean>(true);
   const [salvataggioConfermato, setSalvataggioConfermato] = useState<boolean>(false);
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [nomePreset, setNomePreset] = useState<string>('');
+  const [showPresetsPanel, setShowPresetsPanel] = useState<boolean>(false);
+  const [presetSalvato, setPresetSalvato] = useState<boolean>(false);
+  const [presetInModifica, setPresetInModifica] = useState<Preset | null>(null);
 
   // Carica dati salvati
   useEffect(() => {
@@ -44,6 +55,19 @@ export default function Home() {
         }
       } catch (e) {
         console.error('Errore nel caricamento dei dati salvati', e);
+      }
+    }
+
+    // Carica preset salvati
+    const presetsSalvati = localStorage.getItem('pastadivider_presets');
+    if (presetsSalvati) {
+      try {
+        const presets = JSON.parse(presetsSalvati);
+        if (Array.isArray(presets)) {
+          setPresets(presets);
+        }
+      } catch (e) {
+        console.error('Errore nel caricamento dei preset salvati', e);
       }
     }
   }, []);
@@ -151,20 +175,99 @@ export default function Home() {
     setTimeout(() => setSalvataggioConfermato(false), 2000);
   };
 
+  const salvaPreset = () => {
+    if (!nomePreset) return;
+
+    if (presetInModifica) {
+      // Modifica preset esistente
+      const nuoviPresets = presets.map(preset => {
+        if (preset.id === presetInModifica.id) {
+          return {
+            ...preset,
+            nome: nomePreset,
+            persone: persone.map(({id, nome, quantitaCruda}) => ({
+              id,
+              nome,
+              quantitaCruda
+            }))
+          };
+        }
+        return preset;
+      });
+      
+      setPresets(nuoviPresets);
+      localStorage.setItem('pastadivider_presets', JSON.stringify(nuoviPresets));
+      setPresetInModifica(null);
+    } else {
+      // Crea nuovo preset
+      const nuovoPreset: Preset = {
+        id: crypto.randomUUID(),
+        nome: nomePreset,
+        persone: persone.map(({id, nome, quantitaCruda}) => ({
+          id,
+          nome,
+          quantitaCruda
+        }))
+      };
+
+      const nuoviPresets = [...presets, nuovoPreset];
+      setPresets(nuoviPresets);
+      localStorage.setItem('pastadivider_presets', JSON.stringify(nuoviPresets));
+    }
+    
+    setNomePreset('');
+    setPresetSalvato(true);
+    setTimeout(() => setPresetSalvato(false), 2000);
+  };
+
+  const modificaPreset = (preset: Preset) => {
+    setPresetInModifica(preset);
+    setNomePreset(preset.nome);
+    
+    const nuovePersone = preset.persone.map(persona => ({
+      ...persona,
+      id: `${idBase}-${Math.random()}`,
+      quantitaCotta: 0
+    }));
+    
+    setPersone(nuovePersone);
+    setRisultatiCalcolati(false);
+  };
+
+  const caricaPreset = (preset: Preset) => {
+    const nuovePersone = preset.persone.map(persona => ({
+      ...persona,
+      id: `${idBase}-${Math.random()}`,
+      quantitaCotta: 0
+    }));
+    
+    setPersone(nuovePersone);
+    setRisultatiCalcolati(false);
+    setShowPresetsPanel(false);
+  };
+
+  const eliminaPreset = (id: string) => {
+    const nuoviPresets = presets.filter(preset => preset.id !== id);
+    setPresets(nuoviPresets);
+    localStorage.setItem('pastadivider_presets', JSON.stringify(nuoviPresets));
+  };
+
   const totaleCrudo = persone.reduce((sum, persona) => sum + (persona.quantitaCruda || 0), 0);
   const inputsValidi = pesoTotale > 0 && persone.every(p => p.quantitaCruda > 0);
 
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      setIsMounted(true);
+    }
   }, []);
 
   if (!isMounted) return null;
 
   return (
     <main className="flex min-h-screen flex-col items-center p-4 md:p-8 spaghetti-pattern">
-      <div className="max-w-md w-full mx-auto">
+      <div className="max-w-md w-full mx-auto pb-8">
         <div className="flex items-center justify-center gap-2 mb-2">
           <UtensilsCrossed className="h-8 w-8 text-primary" />
           <h1 className="text-2xl md:text-3xl font-bold text-center">
@@ -188,53 +291,177 @@ export default function Home() {
           </div>
         )}
         
-        <div className="flex justify-end mb-3 gap-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline"
-                  size="sm"
-                  onClick={salvaDati}
-                  className={salvataggioConfermato ? "bg-green-50 text-green-600 border-green-200" : ""}
-                >
-                  {salvataggioConfermato ? (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-1" /> Salvato
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-1" /> Salva
-                    </>
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Salva i dati inseriti per ritrovarli alla prossima visita</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <div className="flex justify-between mb-3 gap-2">
+          <div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowPresetsPanel(!showPresetsPanel)}
+              className="relative"
+            >
+              <Bookmark className="h-4 w-4 mr-1" /> 
+              Preset
+              {presets.length > 0 && (
+                <Badge variant="secondary" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {presets.length}
+                </Badge>
+              )}
+            </Button>
+          </div>
+          
+          <div className="flex gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={salvaDati}
+                    className={salvataggioConfermato ? "bg-green-50 text-green-600 border-green-200" : ""}
+                  >
+                    {salvataggioConfermato ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-1" /> Salvato
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-1" /> Salva
+                      </>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Salva i dati inseriti per ritrovarli alla prossima visita</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <RotateCcw className="h-4 w-4 mr-1" /> Reset
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Sei sicuro di voler resettare?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Questa azione cancellerà tutte le persone e i dati inseriti, e non può essere annullata.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Annulla</AlertDialogCancel>
-                <AlertDialogAction onClick={resetTutto}>Conferma Reset</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <RotateCcw className="h-4 w-4 mr-1" /> Reset
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="max-w-[90vw] w-full md:max-w-md bg-white">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Sei sicuro di voler resettare?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Questa azione cancellerà tutte le persone e i dati inseriti, e non può essere annullata.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                  <AlertDialogCancel className="mt-0">Annulla</AlertDialogCancel>
+                  <AlertDialogAction onClick={resetTutto}>Conferma Reset</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
+        
+        {showPresetsPanel && (
+          <Card className="mb-5 shadow-md border-border">
+            <CardHeader className="bg-secondary/50 rounded-t-lg border-b border-border py-3">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg">I tuoi preset</CardTitle>
+              </div>
+              <CardDescription>Salva e carica configurazioni predefinite</CardDescription>
+            </CardHeader>
+            <CardContent className="p-3">
+              <div className="mb-3 p-2 bg-muted/30 rounded-md">
+                <div className="flex gap-2 mb-2">
+                  <Input 
+                    placeholder="Nome preset" 
+                    value={nomePreset}
+                    onChange={(e) => setNomePreset(e.target.value)}
+                    className="text-sm"
+                  />
+                  <Button 
+                    size="sm" 
+                    variant={presetSalvato ? "secondary" : "default"} 
+                    onClick={salvaPreset}
+                    disabled={!nomePreset || persone.length === 0}
+                    className="whitespace-nowrap"
+                  >
+                    {presetSalvato ? <CheckCircle className="h-4 w-4 mr-1" /> : <Star className="h-4 w-4 mr-1" />}
+                    {presetSalvato ? 'Salvato!' : presetInModifica ? 'Aggiorna' : 'Salva preset'}
+                  </Button>
+                </div>
+                <div className="flex justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    {presetInModifica ? 'Modifica il preset selezionato' : 'Salva la configurazione attuale come preset'}
+                  </p>
+                  {presetInModifica && (
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="h-6 text-xs py-0 px-2 text-muted-foreground" 
+                      onClick={() => {
+                        setPresetInModifica(null);
+                        setNomePreset('');
+                      }}
+                    >
+                      Annulla modifica
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {presets.length === 0 ? (
+                <div className="text-center p-4 text-muted-foreground text-sm">
+                  Non hai ancora salvato preset
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-1">
+                  {presets.map((preset) => (
+                    <div 
+                      key={preset.id} 
+                      className={`flex items-center justify-between p-2 rounded-md ${
+                        presetInModifica?.id === preset.id 
+                          ? 'bg-primary/10 border border-primary/30' 
+                          : 'bg-accent/50'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-medium">{preset.nome}</div>
+                        <div className="text-xs text-muted-foreground flex gap-1">
+                          <User className="h-3 w-3" /> {preset.persone.length} persone
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={() => caricaPreset(preset)}
+                          disabled={presetInModifica?.id === preset.id}
+                        >
+                          Carica
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={() => modificaPreset(preset)}
+                          disabled={presetInModifica?.id === preset.id}
+                          className="text-primary"
+                        >
+                          Modifica
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="text-red-500 hover:text-red-700" 
+                          onClick={() => eliminaPreset(preset.id)}
+                          disabled={presetInModifica?.id === preset.id}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
         
         <Card className="mb-6 shadow-md border-border">
           <CardHeader className="bg-secondary/50 rounded-t-lg border-b border-border">
@@ -435,8 +662,8 @@ type PersonaInputProps = {
 
 function PersonaInput({ persona, onChange, onDelete, onIncremento, isLastSingle }: PersonaInputProps) {
   return (
-    <div className="flex items-end gap-2">
-      <div className="grid gap-2 flex-1">
+    <div className="flex flex-col sm:flex-row gap-2">
+      <div className="grid gap-2 w-full sm:flex-1">
         <Label htmlFor={`nome-${persona.id}`}>Nome</Label>
         <Input 
           id={`nome-${persona.id}`} 
@@ -445,9 +672,9 @@ function PersonaInput({ persona, onChange, onDelete, onIncremento, isLastSingle 
           onChange={(e) => onChange(persona.id, 'nome', e.target.value)}
         />
       </div>
-      <div className="grid gap-2 flex-1">
-        <Label htmlFor={`quantita-${persona.id}`}>Quantità cruda (g)</Label>
-        <div className="flex gap-1">
+      <div className="flex items-end gap-2 w-full sm:flex-1">
+        <div className="grid gap-2 flex-grow">
+          <Label htmlFor={`quantita-${persona.id}`}>Quantità</Label>
           <Input 
             id={`quantita-${persona.id}`} 
             type="number"
@@ -459,36 +686,36 @@ function PersonaInput({ persona, onChange, onDelete, onIncremento, isLastSingle 
             value={persona.quantitaCruda || ''}
             onChange={(e) => onChange(persona.id, 'quantitaCruda', Number(e.target.value))}
           />
-          
-          <div className="flex gap-1">
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="icon"
-              onClick={() => onIncremento(persona.id, -10)}
-            >
-              <Minus className="h-4 w-4" />
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="icon"
-              onClick={() => onIncremento(persona.id, 10)}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
+        </div>
+        
+        <div className="flex gap-1 mb-0.5">
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="icon"
+            onClick={() => onIncremento(persona.id, -10)}
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="icon"
+            onClick={() => onIncremento(persona.id, 10)}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-gray-500"
+            onClick={() => onDelete(persona.id)}
+            disabled={isLastSingle}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="mb-0.5 text-gray-500"
-        onClick={() => onDelete(persona.id)}
-        disabled={isLastSingle}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
     </div>
   )
 }
